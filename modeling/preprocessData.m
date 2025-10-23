@@ -68,79 +68,9 @@ switch preprocPipeline
         dataDir = [directory.Project '/derivatives/fmriprep'];
 end
 
-if exist('commandFlag','var')==0
-    
-    %% Subjects
-    % Remove non-subject directories
-    subjListFlag = questdlg('Choose subjects to process:', ...
-        'Subject Processing', ...
-        'Automated','User selected','Cancel','Automated');
-    
-    % Handle response
-    switch subjListFlag
-        case 'Automated'
-            automationFlag = questdlg('Choose automation process:', ...
-                'Subject Processing', ...
-                'All Subjects','Only Unprocessed','Cancel','All Subjects');
-            
-            switch automationFlag
-                case 'Cancel'
-                    clear;
-                    disp('User cancelled process...');
-                    return;
-            end
-            
-            funcFolders = dir(rawData.funcDir);
-            
-            for i=1:length(funcFolders)
-                subFlag(i) = ~isempty(strfind(funcFolders(i).name,'sub-')); 
-            end
-            funcFolders = funcFolders(subFlag);
-            
-            % Remove errant files
-            dirFlags = [funcFolders.isdir];
-            subfolders = funcFolders(dirFlags);
-            
-            for i=1:length(subfolders)
-                subjects{i} = subfolders(i).name;
-            end
-            
-        case 'User selected'
-            subjects = inputdlg('Enter subject ID. For multiple separate with space:'...
-                ,'Subject ID Input',[1 50]);
-            subjects = split(subjects,[' ',"'"]);
-            
-            % Whitespace check
-            for i=1:length(subjects)
-                remove(i) = ~isempty(subjects{i});
-            end
-            subjects = subjects(remove);
-            
-        case 'Cancel'
-            clear;
-            disp('User cancelled process...');
-            return;
-    end
-    
-else
-    
-    subjListFlag = 'All Subjects';
-    funcFolders = dir(rawData.funcDir);
-    
-    for i=1:length(funcFolders)
-        subFlag(i) = ~isempty(strfind(funcFolders(i).name,'sub-'));
-    end
-    funcFolders = funcFolders(subFlag);
-    
-    % Remove errant files
-    dirFlags = [funcFolders.isdir];
-    subfolders = funcFolders(dirFlags);
-    
-    for i=1:length(subfolders)
-        subjects{i} = subfolders(i).name;
-    end
-    
-end
+% DEB: This entire section is removed. The 'subjects' variable is now
+% assumed to exist in the workspace, having been created by createParams.m.
+% This prevents the subject list from being incorrectly overwritten.
 
 %% Main Code
 
@@ -415,16 +345,16 @@ switch preprocPipeline
         
     case 'fmriprep'
         
-        for i=1:length(subfolders)
+        for i=1:length(subjects)
             
             % Read covariates file
-            tsvFiles = dir([dataDir '/' subfolders(i).name '/func/*' ...
+            tsvFiles = dir([dataDir '/' subjects{i} '/func/*' ...
                 taskInfo.Name '*confound*.tsv']); % '*confound*.tsv' '*motion*.txt'
                 %taskInfo.Name '*motion*.txt']); 
             
             if length(tsvFiles)~=0
                 % Make output folder
-                setenv('outputDir',[directory.Model filesep subfolders(i).name]);
+                setenv('outputDir',[directory.Model filesep subjects{i}]);
                 !mkdir -p $outputDir
             end
             
@@ -452,7 +382,7 @@ switch preprocPipeline
                 
                 % Write new function for writetable - issue in 2019
                 
-                writetable(T,[directory.Model filesep subfolders(i).name filesep...
+                writetable(T,[directory.Model filesep subjects{i} filesep...
                     filename],'Delimiter',' ','WriteVariableNames',false);
                 
                 clear rawCovariates T filename;
@@ -463,4 +393,3 @@ switch preprocPipeline
 end
 
 disp('All finished!!');
-            
