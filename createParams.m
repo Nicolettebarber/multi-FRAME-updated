@@ -46,6 +46,11 @@
 
 %% Set Pipeline Parameters
 
+% --- USER SETTINGS --- %
+% DEB: Define the list of subjects to process.
+% The script will look for folders with these exact names (e.g., 'sub-101', 'sub-201')
+subjects = {'sub-101', 'sub-102'}; % Example: {'sub-101', 'sub-102', 'sub-201'}
+
 %  Set Path Variables
 
 % Parent/Project Path - directory containing project data and analyses
@@ -76,10 +81,7 @@ taskInfo.Conditions = {'cr_new', 'hit_same', 'fa_sim', 'cr_sim'};
 % Accuracy flag
 taskInfo.accuracyFlag = 'No';
 
-% Length of task (in volumes)
-taskInfo.Datapoints = 460;
-
-% Number of runs
+% Default number of runs (can be overridden in subject_config.m)
 taskInfo.Runs = 4;
 
 % Number of trials per run
@@ -159,7 +161,7 @@ switch classType
             searchlight.Metric = 'radius';
             searchlight.Size = 50;
         end
-        
+
     % RSA Flags
     case 'RSA'
         % Compute RSA with mean activation pattern (average all trials)
@@ -172,38 +174,41 @@ switch classType
         end
 end
 
-%% Create Subject List
-
-try
-    % List subject directory
-    subjDir=dir(rawData.funcDir);
-    
-    % Remove any files in directory
-    for i=1:length(subjDir)
-        if subjDir(i).isdir==0
-            fileFlag(i) = 0;
-        else
-            fileFlag(i) = 1;
-        end
-    end
-    subjDir = subjDir(logical(fileFlag));
-    
-    % Remove non-subject directories
-    % change subject tags according to project** 
-    for i=1:length(subjDir)
-        subFlag(i) = ~isempty(strfind(subjDir(i).name, 'sub-')); %change here to reflect you subject naming
-    end
-    subjDir = subjDir(subFlag);
-    
-    % Search directory to get list of subjects
-    for i=1:length(subjDir)
-        subjects{i,1}=subjDir(i).name;
-    end
-    
-    clear subjCount i subjDir;
-catch
-    warning('Unable to create subject list. Set to debug mode.');
-end
+% DEB: The subject list is now defined at the top of the script.
+% This section is no longer needed.
+%
+% %% Create Subject List
+%
+% try
+%     % List subject directory
+%     subjDir=dir(rawData.funcDir);
+%
+%     % Remove any files in directory
+%     for i=1:length(subjDir)
+%         if subjDir(i).isdir==0
+%             fileFlag(i) = 0;
+%         else
+%             fileFlag(i) = 1;
+%         end
+%     end
+%     subjDir = subjDir(logical(fileFlag));
+%
+%     % Remove non-subject directories
+%     % change subject tags according to project**
+%     for i=1:length(subjDir)
+%         subFlag(i) = ~isempty(strfind(subjDir(i).name, 'sub-')); %change here to reflect you subject naming
+%     end
+%     subjDir = subjDir(subFlag);
+%
+%     % Search directory to get list of subjects
+%     for i=1:length(subjDir)
+%         subjects{i,1}=subjDir(i).name;
+%     end
+%
+%     clear subjCount i subjDir;
+% catch
+%     warning('Unable to create subject list. Set to debug mode.');
+% end
 
 %% Assign Conditions
 % DEB: Conditions are already set above.
@@ -275,4 +280,3 @@ setenv('project',directory.Project);
 clear;
 clc;
 disp('All finished!!');
-            
