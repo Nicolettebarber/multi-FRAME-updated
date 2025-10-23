@@ -53,8 +53,12 @@ for iteration = 1:length(subjects)
   % define data filenames & load data   
   data_path=fullfile(study_path, subjects{iteration}); 
   output_path = fullfile(analysis, subjects{iteration});  
-  masks = dir([directory.Analysis filesep 'masks' filesep file(1:end-4)...
-   filesep subjects{iteration} filesep '*.nii']); 
+
+  % DEB: Path directly to the user-specified mask file.
+  mask_path = '/home/acclab/Desktop/axc/multivariate/whole_aal_mask_resliced.nii';
+  [mask_dir, mask_name, mask_ext] = fileparts(mask_path);
+  masks = struct('folder', mask_dir, 'name', [mask_name, mask_ext]);
+
   data_fn=[data_path '/SPM_gz.mat']; %For fMRIprep  
 
   % create the output path if it doesn't already exist

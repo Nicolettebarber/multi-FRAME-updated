@@ -126,7 +126,7 @@ setenv('analysisPath',directory.Model);
 analysisList = {'RSA'};
 classType = analysisList{1};
 
-% Select analysis type.
+% DEB: Select analysis type. Options: 'ROI' or 'Searchlight'
 analysisType = 'ROI';
 
 % Account for RT/regress out.

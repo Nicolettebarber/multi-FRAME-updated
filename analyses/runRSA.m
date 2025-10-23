@@ -71,18 +71,10 @@ for iteration=1:length(subjects)
     end
     
     %% Load Mask Data
-    %For SPM preprocessed
-    %    masks = dir([directory.Analysis filesep 'masks' filesep file(1:end-4)...
-    %    filesep subjects{iteration} filesep '*.nii.gz']);
-    
-    %For fMRIprep preprocessed
-
-    %%%% For Just model folders w/Masks inside
-        masks = dir([directory.Analysis filesep 'masks' ...
-        filesep file(1:end-4) filesep '*.nii']); %  subjects{iteration} 
-   
-   %masks = dir([directory.Analysis filesep 'masks' filesep file(1:end-4)...
-   %filesep subjects{iteration} filesep '*.nii']); 
+    % DEB: Path directly to the user-specified mask file.
+    mask_path = '/home/acclab/Desktop/axc/multivariate/whole_aal_mask_resliced.nii';
+    [mask_dir, mask_name, mask_ext] = fileparts(mask_path);
+    masks = struct('folder', mask_dir, 'name', [mask_name, mask_ext]);
           
     for curMask = 1:length(masks)
         
@@ -92,9 +84,7 @@ for iteration=1:length(subjects)
                 curROI = fullfile(masks(curMask).folder, masks(curMask).name);
                 
                 % Current region name
-                regionName=erase(masks(curMask).name,'.nii'); 
-
-                %regionName=erase(masks(curMask).name,'.nii.gz'); 
+                regionName = erase(masks(curMask).name, '.nii');
                 
                 %%% Loading ROI data into CosmoMVPA - use SPM betas
                 % Note that loading data through the SPM.mat file will automatically
