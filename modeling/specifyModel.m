@@ -44,6 +44,12 @@
  end
 
 %% Main Code
+
+% DEB: Sanity check to ensure prerequisite variables exist
+if ~exist('subjects', 'var') || ~exist('taskInfo', 'var') || ~exist('directory', 'var') || ~exist('rawData', 'var')
+    error('Prerequisite variables (subjects, taskInfo, etc.) not found. Please run createParams.m before running this script.');
+end
+
 for i = 1:length(subjects)
 
     % DEB: Get subject-specific configuration

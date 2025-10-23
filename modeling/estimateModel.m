@@ -36,6 +36,11 @@ spm_jobman('initcfg')
 clc;
 
 
+% DEB: Sanity check to ensure prerequisite variables exist
+if ~exist('subjects', 'var') || ~exist('taskInfo', 'var') || ~exist('directory', 'var') || ~exist('Model', 'var')
+    error('Prerequisite variables (subjects, taskInfo, etc.) not found. Please run createParams.m before running this script.');
+end
+
 
 for curSub =1:length(subjects) %for curSub = number %1:length(Subjects)
 

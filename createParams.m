@@ -282,6 +282,4 @@ setenv('project',directory.Project);
 
 %% Cleanup
 
-clear;
-clc;
 disp('All finished!!');

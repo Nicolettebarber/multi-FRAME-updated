@@ -462,7 +462,5 @@ switch preprocPipeline
         end
 end
 
-clear;
-clc;
 disp('All finished!!');
             
