@@ -19,6 +19,10 @@
 %path to cosmo-mvpa
 
 %% Set data paths
+% DEB: Define which conditions to compare for this specific analysis.
+% The names must exactly match the labels in your behavioral files.
+conditions_to_compare = {'cr_new', 'hit_same', 'fa_sim', 'cr_sim'};
+
 % The function cosmo_config() returns a struct containing paths to tutorial
 % data. (Alternatively the paths can be set manually without using
 % cosmo_config.)
@@ -88,54 +92,25 @@ ds=cosmo_fmri_dataset([data_fn ':beta'],'mask',curROI);
 % all other pairs are equally dissimilar (distance=1).
 curROI
 
-for ii=1:length(Conds)                    
-     Cond{1,ii}=contains(ds.sa.labels, Conds{1,ii});
-     counter=1;                          
+% DEB: Use the user-defined conditions_to_compare to filter the dataset
+is_target_condition = false(size(ds.sa.labels));
+for k = 1:numel(conditions_to_compare)
+    is_target_condition = is_target_condition | ~cellfun(@isempty, strfind(ds.sa.labels, conditions_to_compare{k}));
 end
-   
-Condition(1).idx = find(Conds{1,1}(:,counter+1) == counter);
-Condition(2).idx = find(Conds{1,2}(:,counter+1) == counter);
 
+% Keep only the samples that match the target conditions
+ds = cosmo_slice(ds, is_target_condition);
+
+% Rebuild the CondList based on the filtered dataset
 CondList = zeros(size(ds.samples,1),1);
-      for ii=1:length(Conds)
-          Condition(ii).labels = ~cellfun(@isempty, strfind...
-              (ds.sa.labels, Conds{1,ii}));
-          Condition(ii).idx = find(Condition(ii).labels == 1);
-                            
-         CondList(Condition(ii).idx) = ii;
-                            
-      end
-      
-     ds.sa.targets = CondList;
-     
-% Codes trials/conditions of no interest as 0 (see SpecifyModel script
-     % for trial tag information)
-     Zeroidx = find(CondList == 0);
-                    
-       % Removes all trials of no interest from analysis
-       if isempty(Zeroidx)==0
-           ds.samples(Zeroidx,:)=[];
-           ds.sa.targets(Zeroidx)=[];
-           ds.sa.beta_index(Zeroidx)=[];
-           ds.sa.chunks(Zeroidx)=[];
-           ds.sa.fname(Zeroidx)=[];
-           ds.sa.labels(Zeroidx)=[];
-      end     
-                                      
-% Split dataset into separate condition variables
-      for i=1:length(Cond)
-          index = find(ds.sa.targets == i);
-          Conditions(i) = ds;
-          Conditions(i).samples = Conditions(i).samples(index,:);
-          Conditions(i).sa.beta_index = Conditions(i).sa.beta_index(index);
-          Conditions(i).sa.chunks = Conditions(i).sa.chunks(index);
-          Conditions(i).sa.fname = Conditions(i).sa.fname(index);
-          Conditions(i).sa.labels = Conditions(i).sa.labels(index);
-                                
- %Re-index trials within condition into separate targets
-         Conditions(i).sa.targets = [1:length(index)]';
-         Conditions(i).samples = Conditions(i).samples';                    
-      end
+for ii=1:length(conditions_to_compare)
+    Condition(ii).labels = ~cellfun(@isempty, strfind...
+        (ds.sa.labels, conditions_to_compare{ii}));
+    Condition(ii).idx = find(Condition(ii).labels == 1);
+    CondList(Condition(ii).idx) = ii;
+end
+
+ds.sa.targets = CondList;
    
 nsamples=size(ds.samples,1);
 target_dsm=zeros(nsamples);

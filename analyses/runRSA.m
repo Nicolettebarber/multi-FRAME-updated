@@ -27,6 +27,9 @@
 % Requires zipped betas in nifti format and co-registered ROIs 
 
 %% Set Analysis Parameters & Paths
+% DEB: Define which conditions to compare for this specific analysis.
+% The names must exactly match the labels in your behavioral files.
+conditions_to_compare = {'cr_new', 'hit_same', 'fa_sim', 'cr_sim'};
 
 % Load all relevent project information
 if exist('commandFlag','var') == 0
@@ -168,40 +171,24 @@ for iteration=1:length(subjects)
         switch classType
             case 'RSA'
                 try
-                    % Identify trials of interest for each condition
-                    if exist('subConds','var')
-                        
-                        for ii=1:length(taskInfo.Conditions)
-                            
-                            subCond.(taskInfo.Conditions{1,ii})=contains(currDataset.sa.labels, taskInfo.Conditions{1,ii});
-                            counter=1;
-                            
-                            for iii=1:length(subConds)
-                                subCond.(taskInfo.Conditions{1,ii})(:,counter+1)=contains...
-                                    (currDataset.sa.labels, subConds{1,iii});
-                                counter=counter+1;
-                            end
-                            
-                            subCond.(taskInfo.Conditions{1,ii})=double(subCond.(taskInfo.Conditions{1,ii}));
-                            subCond.(taskInfo.Conditions{1,ii})(:,counter+1)=sum(subCond.(taskInfo.Conditions{1,ii})(:,1:counter),2);
-                            
-                        end
-                        
-                        Cond(1).idx = find(subCond.(taskInfo.Conditions{1,1})(:,counter+1) == counter);
-                        Cond(2).idx = find(subCond.(taskInfo.Conditions{1,2})(:,counter+1) == counter);
-                        
-                    else
-                        
-                        CondList = zeros(size(currDataset.samples,1),1);
-                        for ii=1:length(taskInfo.Conditions)
-                            Cond(ii).labels = ~cellfun(@isempty, strfind...
-                                (currDataset.sa.labels, taskInfo.Conditions{ii}));
-                            Cond(ii).idx = find(Cond(ii).labels == 1);
-                            
-                            CondList(Cond(ii).idx) = ii;
-                            
-                        end
-                        
+                    % DEB: Use the user-defined conditions_to_compare to filter the dataset
+
+                    % Find all trials that match any of the conditions to compare
+                    is_target_condition = false(size(currDataset.sa.labels));
+                    for k = 1:numel(conditions_to_compare)
+                        is_target_condition = is_target_condition | ~cellfun(@isempty, strfind(currDataset.sa.labels, conditions_to_compare{k}));
+                    end
+
+                    % Keep only the samples that match the target conditions
+                    currDataset = cosmo_slice(currDataset, is_target_condition);
+
+                    % Rebuild the CondList and Cond structures based on the filtered dataset
+                    CondList = zeros(size(currDataset.samples,1),1);
+                    for ii=1:length(conditions_to_compare)
+                        Cond(ii).labels = ~cellfun(@isempty, strfind...
+                            (currDataset.sa.labels, conditions_to_compare{ii}));
+                        Cond(ii).idx = find(Cond(ii).labels == 1);
+                        CondList(Cond(ii).idx) = ii;
                     end
                     
                     currDataset.sa.targets = CondList;
