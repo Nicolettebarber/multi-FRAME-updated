@@ -52,7 +52,7 @@ for i = 1:length(subjects)
 
     % Creates path to the current subjects behavioral file
     curSubj.behavDir  = [directory.Project filesep current_subject_id filesep rawData.behavDir]; %For fMRIprep
-    curSubj.behavFile = dir([curSubj.behavDir filesep '*' subject_taskInfo.Name '*.' rawData.behavFile]); %change to look for enc files or ret files
+    curSubj.behavFile = dir([curSubj.behavDir filesep current_subject_id '*' subject_taskInfo.Name '*.' rawData.behavFile]); %change to look for enc files or ret files
 
     % Creates a path to this subjects analysis directory & creates that
     % directory if it does not already exist.
