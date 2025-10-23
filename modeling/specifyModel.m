@@ -45,26 +45,30 @@
 
 %% Main Code
 for i = 1:length(subjects)
+
+    % DEB: Get subject-specific configuration
+    current_subject_id = subjects{i};
+    subject_taskInfo = subject_config(current_subject_id, taskInfo);
+
     % Creates path to the current subjects behavioral file
-    curSubj.behavDir  = [directory.Project filesep subjects{i} filesep rawData.behavDir]; %For fMRIprep
-    curSubj.behavFile = dir([curSubj.behavDir filesep '*' taskInfo.Name '*.' rawData.behavFile]); %change to look for enc files or ret files
+    curSubj.behavDir  = [directory.Project filesep current_subject_id filesep rawData.behavDir]; %For fMRIprep
+    curSubj.behavFile = dir([curSubj.behavDir filesep '*' subject_taskInfo.Name '*.' rawData.behavFile]); %change to look for enc files or ret files
 
     % Creates a path to this subjects analysis directory & creates that
     % directory if it does not already exist.
-    curSubj.directory = fullfile(directory.Model, subjects{i});
+    curSubj.directory = fullfile(directory.Model, current_subject_id);
     if ~isdir(curSubj.directory)
         mkdir(curSubj.directory)
     end
 
-    % Initalize the counter cell array to track number of trials in each functional run
-    %number_of_runs = max(unique(BehavData.block));
+    fprintf('Processing subject %s with %d runs...\n', current_subject_id, subject_taskInfo.Runs);
     fprintf('Sorting Behavioral Data...\n\n')
 
     % Build the multiple conditions *.mat file for each run
-    for curRun = 1:taskInfo.Runs
+    for curRun = 1:subject_taskInfo.Runs
 
         % Reads in the subjects behavioral data using the readtable command.
-        fprintf('Reading in subject %s behavioral data for run %d...\n', subjects{i}, curRun);
+        fprintf('Reading in subject %s behavioral data for run %d...\n', current_subject_id, curRun);
         BehavData = readtable([curSubj.behavDir filesep curSubj.behavFile(curRun).name],'FileType','text');
 
         %-- Initialize the names, onsets, durations, and pmods structure arrays

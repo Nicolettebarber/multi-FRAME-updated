@@ -39,11 +39,15 @@ clc;
 
 for curSub =1:length(subjects) %for curSub = number %1:length(Subjects)
 
+    % DEB: Get subject-specific configuration
+    current_subject_id = subjects{curSub};
+    subject_taskInfo = subject_config(current_subject_id, taskInfo);
+
     fprintf('\n')
-    fprintf('Subject: %s\n\n',subjects{curSub})
+    fprintf('Processing subject %s with %d runs...\n', current_subject_id, subject_taskInfo.Runs);
 
     % Model Directory: directory containing this subject's model
-    Model.directory = fullfile(directory.Model, subjects{curSub});
+    Model.directory = fullfile(directory.Model, current_subject_id);
 
     % If we are using a mask, create a path to the mask
     if Mask.on == 1
@@ -100,10 +104,10 @@ for curSub =1:length(subjects) %for curSub = number %1:length(Subjects)
             %procDataDir = fullfile(directory.Model, subjects{curSub});
 
             procFuncFiles = dir(fullfile(directory.Project, 'derivatives',...
-                'fmriprep', subjects{curSub}, 'func',...
-                [Func.prefix '*' taskInfo.Name '*_bold.nii']));
+                'fmriprep', current_subject_id, 'func',...
+                [Func.prefix '*' subject_taskInfo.Name '*_bold.nii']));
 
-            for i = 1:taskInfo.Runs
+            for i = 1:subject_taskInfo.Runs
 
                 % Get the source file path
                 sourceFile = fullfile(procFuncFiles(i).folder, procFuncFiles(i).name);
