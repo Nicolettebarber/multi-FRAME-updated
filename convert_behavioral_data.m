@@ -1,14 +1,14 @@
 function convert_behavioral_data()
     % Converts raw behavioral data from .xlsx files to BIDS-compliant .tsv files.
     %
-    % This script reads raw behavioral data from individual subject .xlsx files,
-    % processes it, recodes trial types, and saves it as a set of BIDS-compliant
-    % _events.tsv files in the subject's 'beh' directory, ready for use with
-    % the multi-FRAME pipeline.
+    % This script reads raw behavioral data from a single concatenated .xlsx file
+    % for each subject, segments it into runs based on predefined trial indices,
+    % recodes trial types, and saves it as a set of BIDS-compliant _events.tsv
+    % files in the subject's 'beh' directory.
     %
     % Key Features:
     % - User-configurable settings at the top of the script.
-    % - Automatically detects the number of runs from the data.
+    % - Segments a single concatenated file into multiple runs.
     % - Safely backs up existing .tsv files before overwriting.
     % - Preserves all original columns from the source Excel file.
 
@@ -17,8 +17,17 @@ function convert_behavioral_data()
     % --- USER SETTINGS --- %
 
     % Define the list of subject numbers to process.
-    % Example: [101, 102, 201:205]
-    selected_subjects = [101, 102];
+    selected_subjects = [101, 102]; % Example: [101, 102, 201:205]
+
+    % Define the trial indices for each run.
+    % Each cell represents one run and contains the range of rows in the Excel
+    % file that corresponds to that run.
+    run_indices = {
+        2:90,   % Run 1
+        92:180, % Run 2
+        182:270, % Run 3
+        272:360  % Run 4
+    };
 
     % Define the base directory for the project.
     base_dir = '/home/acclab/Desktop/axc';
@@ -32,6 +41,7 @@ function convert_behavioral_data()
     % --- END USER SETTINGS --- %
 
     fprintf('Starting behavioral data conversion process...\n\n');
+    num_runs = length(run_indices);
 
     % Process each selected subject
     for sub_num = selected_subjects
@@ -54,15 +64,6 @@ function convert_behavioral_data()
             continue;
         end
 
-        % Automatically determine the number of runs based on the 'Run' column
-        if ~ismember('Run', data.Properties.VariableNames)
-            fprintf('ERROR: "Run" column not found in Excel file for subject %d. Skipping.\n\n', sub_num);
-            continue;
-        end
-        unique_runs = unique(data.Run);
-        num_runs = length(unique_runs);
-        fprintf('Found %d runs for subject %d.\n', num_runs, sub_num);
-
         % Create the subject's 'beh' directory if it doesn't exist
         beh_sub_dir = fullfile(base_dir, sprintf('sub-%03d', sub_num), 'beh');
         if ~exist(beh_sub_dir, 'dir')
@@ -70,12 +71,17 @@ function convert_behavioral_data()
             fprintf('Created directory: %s\n', beh_sub_dir);
         end
 
-        % Process each run found in the data
-        for run_idx = 1:num_runs
-            run = unique_runs(run_idx);
+        % Process each run based on the defined indices
+        for run = 1:num_runs
+            fprintf('Processing Run %d...\n', run);
 
             % Extract trials for this run
-            run_data = data(data.Run == run, :);
+            try
+                run_data = data(run_indices{run}, :);
+            catch ME
+                fprintf('ERROR: Could not extract trials for subject %d, run %d. The Excel file may not have enough rows. Skipping run. Error: %s\n', sub_num, run, ME.message);
+                continue;
+            end
 
             % Create BIDS-compatible table
             bids_table = table();
