@@ -1,6 +1,6 @@
 %% Create Parameters
 %   Editor:    Daniel Elbich
-%   Created:   3/14/19
+%   Created   :   3/14/19
 %
 %   Creates parameters .mat file for use with MVPA scripts
 %
@@ -49,7 +49,12 @@
 % --- USER SETTINGS --- %
 % DEB: Define the list of subjects to process.
 % The script will look for folders with these exact names (e.g., 'sub-101', 'sub-201')
-subjects = {'sub-101', 'sub-102'}; % Example: {'sub-101', 'sub-102', 'sub-201'}
+subject_numbers = [101 102 104:108 110:128 130 133:143 146 148 151 152 154:157 159 160 162:166 170 171 ...
+    402:426 428:435 437:440 442:448 450:458 460 ...
+    202:203 206:210 215:218 221:223 226:230 233 236 237 239 243:245 248:257 259 261 266 ...
+    501:510 512 513 516 518:534 536:542 544 545 547:562];
+subjects = cellfun(@(x) sprintf('sub-%d', x), num2cell(subject_numbers), 'UniformOutput', false);
+
 
 %  Set Path Variables
 
