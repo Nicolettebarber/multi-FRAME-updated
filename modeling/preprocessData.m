@@ -65,7 +65,7 @@ switch preprocPipeline
         !mkdir -p $processDir/psfiles;
         
     case 'fmriprep'
-        dataDir = [directory.Project '/preprocessing/fmriprep'];
+        dataDir = [directory.Project '/derivatives/fmriprep'];
 end
 
 if exist('commandFlag','var')==0

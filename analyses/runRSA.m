@@ -27,8 +27,6 @@
 % Requires zipped betas in nifti format and co-registered ROIs 
 
 %% Set Analysis Parameters & Paths
-addpath(genpath...
-    ('/storage/group/nad12/default/nad12/toolbox/CoSMoMVPA-master/CoSMoMVPA-master'));
 
 % Load all relevent project information
 if exist('commandFlag','var') == 0

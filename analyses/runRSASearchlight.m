@@ -17,8 +17,6 @@
 %%  demo from http://www.cosmomvpa.org/_static/publish/demo_fmri_searchlight_rsm.html 
 
 %path to cosmo-mvpa
-addpath(genpath...
-    ('/gpfs/group/nad12/default/nad12/toolbox/CoSMoMVPA-master/CoSMoMVPA-master'));
 
 %% Set data paths
 % The function cosmo_config() returns a struct containing paths to tutorial
