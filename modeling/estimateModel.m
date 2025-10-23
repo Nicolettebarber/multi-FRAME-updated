@@ -101,25 +101,21 @@ for curSub =1:length(subjects) %for curSub = number %1:length(Subjects)
 
             procFuncFiles = dir(fullfile(directory.Project, 'derivatives',...
                 'fmriprep', subjects{curSub}, 'func',...
-                ['*' taskInfo.Name '*_bold.nii.gz']));
+                [Func.prefix '*' taskInfo.Name '*_bold.nii']));
 
             for i = 1:taskInfo.Runs
-                curFuncDir = fullfile(directory.Project, 'derivatives',...
-                    'fmriprep', subjects{curSub}, 'func');
 
-                % Copy raw functional to Model Directory and gunzip
-                setenv('data',[procFuncFiles(i).folder filesep procFuncFiles(i).name]);
-                setenv('dest',[fullfile(directory.Model, subjects{curSub})]);
-                setenv('modelData',[fullfile(directory.Model, subjects{curSub},...
-                    procFuncFiles(i).name)]);
-                !cp $data $dest
-                !gunzip $modelData
+                % Get the source file path
+                sourceFile = fullfile(procFuncFiles(i).folder, procFuncFiles(i).name);
+                destDir = fullfile(directory.Model, subjects{curSub});
 
-                 Model.runs{i}.scans = cellstr(spm_select('ExtFPList', ...
-                    fullfile(directory.Model, subjects{curSub}), ...
-                    [Func.wildcard num2str(i)], Inf));
-                 Model.runs{i}.multicond = fullfile(Model.directory, SpecModelMats{i});        % from Model Spec
-                 Model.runs{i}.motion = [motionFiles(i).folder filesep motionFiles(i).name]; % from realignment
+                % Copy functional to Model Directory (no gunzip needed)
+                copyfile(sourceFile, destDir);
+
+                % Define the path to the copied scan for the model
+                Model.runs{i}.scans = {fullfile(destDir, procFuncFiles(i).name)};
+                Model.runs{i}.multicond = fullfile(Model.directory, SpecModelMats{i});
+                Model.runs{i}.motion = fullfile(motionFiles(i).folder, motionFiles(i).name);
 
             end
 
@@ -231,11 +227,20 @@ for curSub =1:length(subjects) %for curSub = number %1:length(Subjects)
             !gzip $procDataDir/run*/*.nii
 
         case 'fmriprep'
-            % Remove copied functional data from model directory
-             !rm $dest/*_bold.nii
+            % DEB: Correctly identify and remove the temporary functional files
+            for i = 1:taskInfo.Runs
+                tempFile = fullfile(destDir, procFuncFiles(i).name);
+                if exist(tempFile, 'file')
+                    delete(tempFile);
+                end
+            end
 
-            % Gzip output model
-            !gzip $dest/*.nii
+            % Gzip output model files
+            modelFiles = dir(fullfile(destDir, '*.nii'));
+            for i = 1:length(modelFiles)
+                gzip(fullfile(destDir, modelFiles(i).name));
+                delete(fullfile(destDir, modelFiles(i).name));
+            end
 
     end
 

@@ -110,6 +110,7 @@ Model.TR    = 0.8;
         case 'fmriprep'
             Func.dir         = [directory.Project filesep rawData.funcDir];
             Func.wildcard    = ['^*' taskInfo.Name '_run-']; % File
+            Func.prefix      = 'w';
             
     end
     
