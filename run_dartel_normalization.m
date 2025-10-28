@@ -9,23 +9,14 @@ function run_dartel_normalization()
     % - Robustly handles subjects with a variable number of runs.
     % - Skips subjects who already have the output 'w' files.
     % - Skips subjects who are missing the necessary DARTEL flowfield file.
-    %
-    % Before running:
-    % 1. Make sure SPM is in your MATLAB path.
-    % 2. Update the 'subs' list to include all the subject IDs you want to process.
-    % 3. Ensure the 'base_dir' and 'template_path' are correct for your system.
 
     clear; clc;
 
     % --- USER SETTINGS --- %
-    % Define subject IDs to be processed
     subs = [101:102]; % Example: [101:105, 201, 203]
-
-    % Base directory containing the 'derivatives' folder
     base_dir = '/home/acclab/Desktop/axc/derivatives';
-
-    % Full path to your DARTEL template file
     template_path = fullfile(base_dir, 'matlab/spm/DARTEL_templates/Full_MST/Template_AxCFull_6.nii');
+    fmri_file_prefix = 'w'; % The prefix for the output functional files
 
     % --- END USER SETTINGS --- %
 
@@ -39,20 +30,16 @@ function run_dartel_normalization()
         sub_id_str = sprintf('sub-%03d', sub);
         fprintf('\nStarting Subject: %s\n', sub_id_str);
 
-        % Define subject-specific paths
         func_dir = fullfile(base_dir, 'fmriprep', sub_id_str, 'func');
         flowfield_path = fullfile(base_dir, 'fmriprep', sub_id_str, 'anat', ...
             sprintf('u_rc1%s_desc-preproc_T1w_Template_AxCFull.nii', sub_id_str));
 
-        % --- Pre-flight checks --- %
-
-        % Skip if flowfield is missing
         if ~exist(flowfield_path, 'file')
             fprintf('WARNING: Flowfield missing for %s, skipping...\n', sub_id_str);
             continue;
         end
 
-        % Find all existing functional runs for this subject
+        % Find all existing (non-w-prefixed) functional runs for this subject
         input_files_struct = dir(fullfile(func_dir, ...
             sprintf('%s_task-retrieval_run-*_space-MNI152NLin2009cAsym_desc-preproc_bold.nii', sub_id_str)));
 
@@ -62,60 +49,44 @@ function run_dartel_normalization()
         end
 
         num_runs = length(input_files_struct);
-        fprintf('Found %d runs for %s.\n', num_runs, sub_id_str);
 
-        % Check if all output 'w' files already exist
-        w_files_exist = true;
+        % Check if all output 'w' files for the existing runs already exist
+        w_files_exist_count = 0;
         for run = 1:num_runs
-            output_file = fullfile(func_dir, sprintf('w%s_task-retrieval_run-%d_space-MNI152NLin2009cAsym_desc-preproc_bold.nii', sub_id_str, run));
-            if ~exist(output_file, 'file')
-                w_files_exist = false;
-                break;
+            % Note: SPM creates the run number from the filename, not a simple index
+            [~, fname, ~] = fileparts(input_files_struct(run).name);
+            run_num_str = regexp(fname, 'run-(\d+)', 'tokens');
+            if ~isempty(run_num_str)
+                run_num = str2double(run_num_str{1});
+                output_file = fullfile(func_dir, sprintf('%s%s_task-retrieval_run-%d_space-MNI152NLin2009cAsym_desc-preproc_bold.nii', fmri_file_prefix, sub_id_str, run_num));
+                if exist(output_file, 'file')
+                    w_files_exist_count = w_files_exist_count + 1;
+                end
             end
         end
 
-        if w_files_exist
-             fprintf('Skipping %s (all w-prefixed files already exist)\n', sub_id_str);
+        if w_files_exist_count == num_runs
+             fprintf('Skipping %s (all %d w-prefixed files already exist)\n', sub_id_str, num_runs);
              continue;
         end
 
-        % --- Prepare and run batch --- %
+        fprintf('Found %d runs to process for %s.\n', num_runs, sub_id_str);
 
-        % Collate input file paths
         input_files = cell(num_runs, 1);
         for run = 1:num_runs
             input_files{run} = fullfile(func_dir, input_files_struct(run).name);
         end
 
-        % Configure SPM batch for DARTEL normalization
         matlabbatch = [];
         matlabbatch{1}.spm.tools.dartel.mni_norm.template = {template_path};
         matlabbatch{1}.spm.tools.dartel.mni_norm.data.subj.flowfield = {flowfield_path};
         matlabbatch{1}.spm.tools.dartel.mni_norm.data.subj.images = input_files;
-
-        % Apply DARTEL normalization without smoothing
         matlabbatch{1}.spm.tools.dartel.mni_norm.vox = [2.3 2.3 2.3];
         matlabbatch{1}.spm.tools.dartel.mni_norm.preserve = 0;
-        matlabbatch{1}.spm.tools.dartel.mni_norm.fwhm = [0 0 0];  % No smoothing
+        matlabbatch{1}.spm.tools.dartel.mni_norm.fwhm = [0 0 0];
 
-        % Run processing
         try
             spm_jobman('run', matlabbatch);
-
-            % Rename outputs to the desired 'w' prefix format
-            for run = 1:num_runs
-                % SPM appends 'w' to the *beginning* of the original filename
-                spm_output_file = fullfile(func_dir, ['w' input_files_struct(run).name]);
-                final_output_file = fullfile(func_dir, sprintf('w%s_task-retrieval_run-%d_space-MNI152NLin2009cAsym_desc-preproc_bold.nii', sub_id_str, run));
-
-                if exist(spm_output_file, 'file')
-                    % In this case, SPM's default output matches our desired output, so no move is needed.
-                    % We just confirm it was created.
-                    fprintf('Created: %s\n', spm_output_file);
-                else
-                    fprintf('WARNING: Expected output missing for %s, run-%d\n', sub_id_str, run);
-                end
-            end
 
             fprintf('Successfully processed %s\n', sub_id_str);
 
@@ -125,5 +96,5 @@ function run_dartel_normalization()
     end
 
     fprintf('\nProcessing complete!\n');
-    fprintf('All new `w` files saved in their respective `fmriprep/sub-*/func/` directories.\n');
+    fprintf('All new `%s` files saved in their respective `fmriprep/sub-*/func/` directories.\n', fmri_file_prefix);
 end

@@ -7,8 +7,8 @@ function convert_behavioral_data()
     % recodes trial types, and saves a set of BIDS-compliant _events.tsv files.
     %
     % Key Features:
-    % - Automatically discovers the number of runs per subject, ensuring perfect
-    %   alignment between functional and behavioral data.
+    % - Automatically discovers the number of runs per subject by looking for
+    %   the final 'w'-prefixed functional files, ensuring perfect alignment.
     % - User-configurable settings at the top of the script.
     % - Safely backs up existing .tsv files before overwriting.
 
@@ -30,6 +30,7 @@ function convert_behavioral_data()
     behav_source_dir = fullfile(base_dir, 'raw_behavioral_MST');
     fmri_data_dir = fullfile(base_dir, 'derivatives', 'fmriprep');
     create_backups = true;
+    fmri_file_prefix = 'w'; % The prefix of the final functional files to look for
 
     % --- END USER SETTINGS --- %
 
@@ -42,14 +43,15 @@ function convert_behavioral_data()
 
         % --- Automatic Run Discovery --- %
         func_dir = fullfile(fmri_data_dir, sub_id_str, 'func');
-        run_files = dir(fullfile(func_dir, sprintf('%s_task-retrieval_run-*_bold.nii.gz', sub_id_str)));
+        % DEB: Search for the final 'w'-prefixed files to get the correct run count
+        run_files = dir(fullfile(func_dir, sprintf('%s%s_task-retrieval_run-*_bold.nii', fmri_file_prefix, sub_id_str)));
         num_runs = length(run_files);
 
         if num_runs == 0
-            fprintf('WARNING: No functional run files found for %s in %s. Skipping.\n\n', sub_id_str, func_dir);
+            fprintf('WARNING: No final functional files (with prefix ''%s'') found for %s in %s. Skipping.\n\n', fmri_file_prefix, sub_id_str, func_dir);
             continue;
         end
-        fprintf('   Discovered %d functional runs for this subject.\n', num_runs);
+        fprintf('   Discovered %d final functional runs for this subject.\n', num_runs);
 
         % --- Behavioral File Processing --- %
         excel_path = fullfile(behav_source_dir, sprintf('%d.xlsx', sub_num));
