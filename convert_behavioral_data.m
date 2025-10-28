@@ -2,61 +2,63 @@ function convert_behavioral_data()
     % Converts raw behavioral data from .xlsx files to BIDS-compliant .tsv files.
     %
     % This script reads raw behavioral data from a single concatenated .xlsx file
-    % for each subject, segments it into runs based on predefined trial indices,
-    % recodes trial types, and saves it as a set of BIDS-compliant _events.tsv
-    % files in the subject's 'beh' directory.
+    % for each subject. It dynamically determines the number of runs by finding
+    % the actual fMRI data files, segments the behavioral data accordingly,
+    % recodes trial types, and saves a set of BIDS-compliant _events.tsv files.
     %
     % Key Features:
+    % - Automatically discovers the number of runs per subject, ensuring perfect
+    %   alignment between functional and behavioral data.
     % - User-configurable settings at the top of the script.
-    % - Segments a single concatenated file into multiple runs.
     % - Safely backs up existing .tsv files before overwriting.
-    % - Preserves all original columns from the source Excel file.
 
     clear; clc;
 
     % --- USER SETTINGS --- %
 
-    % Define the list of subject numbers to process.
-    selected_subjects = [101, 102]; % Example: [101, 102, 201:205]
+    selected_subjects = [101, 102, 201, 211]; % Example: [101, 102, 201:205, 211]
 
-    % Define the trial indices for each run.
-    % Each cell represents one run and contains the range of rows in the Excel
-    % file that corresponds to that run.
     run_indices = {
         2:90,   % Run 1
         92:180, % Run 2
         182:270, % Run 3
-        272:360  % Run 4
+        272:360, % Run 4
+        362:450  % Run 5 (Indices for a potential 5th run)
     };
 
-    % Define the base directory for the project.
     base_dir = '/home/acclab/Desktop/axc';
-
-    % Define the directory where the raw .xlsx behavioral files are stored.
     behav_source_dir = fullfile(base_dir, 'raw_behavioral_MST');
-
-    % Set to true to back up existing .tsv files, or false to overwrite them directly.
+    fmri_data_dir = fullfile(base_dir, 'derivatives', 'fmriprep');
     create_backups = true;
 
     % --- END USER SETTINGS --- %
 
     fprintf('Starting behavioral data conversion process...\n\n');
-    num_runs = length(run_indices);
 
     % Process each selected subject
     for sub_num = selected_subjects
-        fprintf('--- Processing subject %d ---\n', sub_num);
+        sub_id_str = sprintf('sub-%d', sub_num);
+        fprintf('--- Processing subject %s ---\n', sub_id_str);
 
-        % Path to the subject's source Excel file
+        % --- Automatic Run Discovery --- %
+        func_dir = fullfile(fmri_data_dir, sub_id_str, 'func');
+        run_files = dir(fullfile(func_dir, sprintf('%s_task-retrieval_run-*_bold.nii.gz', sub_id_str)));
+        num_runs = length(run_files);
+
+        if num_runs == 0
+            fprintf('WARNING: No functional run files found for %s in %s. Skipping.\n\n', sub_id_str, func_dir);
+            continue;
+        end
+        fprintf('   Discovered %d functional runs for this subject.\n', num_runs);
+
+        % --- Behavioral File Processing --- %
         excel_path = fullfile(behav_source_dir, sprintf('%d.xlsx', sub_num));
 
-        % Check if the source file exists
         if ~exist(excel_path, 'file')
-            fprintf('WARNING: Skipping subject %d (file not found: %s)\n\n', sub_num, excel_path);
+            fprintf('WARNING: Skipping subject %d (behavioral file not found: %s)\n\n', sub_num, excel_path);
             continue;
         end
 
-        % Load data from the Excel file
         try
             data = readtable(excel_path);
         catch ME
@@ -64,33 +66,32 @@ function convert_behavioral_data()
             continue;
         end
 
-        % Create the subject's 'beh' directory if it doesn't exist
         beh_sub_dir = fullfile(base_dir, sprintf('sub-%03d', sub_num), 'beh');
         if ~exist(beh_sub_dir, 'dir')
             mkdir(beh_sub_dir);
-            fprintf('Created directory: %s\n', beh_sub_dir);
+            fprintf('   Created directory: %s\n', beh_sub_dir);
         end
 
-        % Process each run based on the defined indices
+        % Process the discovered number of runs
         for run = 1:num_runs
-            fprintf('Processing Run %d...\n', run);
+            fprintf('   Processing Run %d...\n', run);
 
-            % Extract trials for this run
-            try
-                run_data = data(run_indices{run}, :);
-            catch ME
-                fprintf('ERROR: Could not extract trials for subject %d, run %d. The Excel file may not have enough rows. Skipping run. Error: %s\n', sub_num, run, ME.message);
+            if run > length(run_indices)
+                fprintf('   ERROR: Not enough run_indices defined for run %d. Skipping run.\n', run);
                 continue;
             end
 
-            % Create BIDS-compatible table
-            bids_table = table();
+            try
+                run_data = data(run_indices{run}, :);
+            catch ME
+                fprintf('   ERROR: Could not extract trials for run %d. The Excel file may not have enough rows. Skipping run.\n', run);
+                continue;
+            end
 
-            % 1. Add onset and duration
+            bids_table = table();
             bids_table.onset = run_data.StartT;
             bids_table.duration = run_data.EndT - run_data.StartT;
 
-            % 2. Recode trial_type
             if iscell(run_data.Resp)
                 resp_numeric = cellfun(@str2double, run_data.Resp);
             else
@@ -120,7 +121,6 @@ function convert_behavioral_data()
             end
             bids_table.trial_type = trial_types;
 
-            % 3. Preserve all additional original columns
             original_cols = run_data.Properties.VariableNames;
             for col_name_cell = original_cols
                 col_name = col_name_cell{:};
@@ -129,22 +129,18 @@ function convert_behavioral_data()
                 end
             end
 
-            % Generate BIDS-compliant filename
             events_filename = sprintf('sub-%03d_task-retrieval_run-%d_events.tsv', sub_num, run);
             beh_file_path = fullfile(beh_sub_dir, events_filename);
 
-            % Backup existing file if it exists and backups are enabled
             if exist(beh_file_path, 'file') && create_backups
                 backup_path = [beh_file_path '.bak'];
                 movefile(beh_file_path, backup_path);
-                fprintf('Backed up existing file to: %s\n', backup_path);
             end
 
-            % Save the new .tsv file
             writetable(bids_table, beh_file_path, 'FileType', 'text', 'Delimiter', '\t');
-            fprintf('Saved new behavioral file: %s\n', beh_file_path);
+            fprintf('      Saved new behavioral file: %s\n', beh_file_path);
         end
-        fprintf('Completed processing for subject %d.\n\n', sub_num);
+        fprintf('   Completed processing for subject %d.\n\n', sub_num);
     end
 
     disp('--- All processing complete. ---');
