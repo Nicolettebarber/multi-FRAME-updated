@@ -33,6 +33,10 @@ function run_first_level_setup()
     Model.TR    = 0.8;
     Func.prefix = 'w';
 
+    % DEB: Define analysisType and regressRT, which were missing
+    analysisType = 'ROI'; % Options: 'ROI' or 'Searchlight'
+    regressRT.flag = 'No'; % Options: 'Yes' or 'No'
+
     % --- Less frequently changed parameters --- %
     rawData.funcDir = fullfile(directory.Project, 'derivatives', 'fmriprep');
     rawData.behavDir = 'beh';
@@ -106,6 +110,7 @@ function run_first_level_setup()
     %% SAVE PARAMETERS FOR DOWNSTREAM SCRIPTS
     %==========================================================================
     param_filename = fullfile(directory.Analysis, 'params_for_downstream.mat');
+    % DEB: Add missing variables 'analysisType' and 'regressRT' to the save command
     save(param_filename, 'directory', 'rawData', 'preprocPipeline', 'taskInfo', 'Model', 'Mask', 'Func', 'subjects', 'analysisType', 'regressRT');
     fprintf('3. Parameters saved to: %s\n\n', param_filename);
 
